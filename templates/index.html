@@ -163,17 +163,15 @@
                             } else {
                                 try {
                                     let obj = JSON.parse(content);
-                                    if (obj.event === 'message' && obj.answer) {
-                                        result += obj.answer;
-                                        document.getElementById('stream_result').innerText = result;
-                                    }
-                                    if (obj.event === 'message_end') {
-                                        // 结束
+                                    // 兼容 '直接回复8' 和 '直接回复 8'
+                                    if (obj.event === 'node_finished' && obj.data && obj.data.title && (obj.data.title === '直接回复8' || obj.data.title === '直接回复 8')) {
+                                        if (obj.data.outputs && obj.data.outputs.answer) {
+                                            result = obj.data.outputs.answer;
+                                            document.getElementById('stream_result').innerText = result;
+                                        }
                                     }
                                 } catch (e) {
-                                    // 不是json，直接拼接
-                                    result += content;
-                                    document.getElementById('stream_result').innerText = result;
+                                    // 忽略解析失败的片段
                                 }
                             }
                         }
