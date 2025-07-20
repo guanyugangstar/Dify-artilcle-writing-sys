@@ -6,7 +6,6 @@ import requests
 import json
 
 app = Flask(__name__)
-app.secret_key = 'app-uWIUClU21goqYXge3pnZNJdv'
 
 # Dify API配置（建议用环境变量管理）
 DIFY_API_BASE_URL = 'http://localhost/v1'
@@ -161,6 +160,56 @@ def stream_chat():
         except Exception as e:
             yield f"data: [ERROR] {str(e)}\n\n"
     return Response(stream_with_context(event_stream()), mimetype='text/event-stream')
+
+@app.route('/generate_ppt', methods=['POST'])
+def generate_ppt():
+    """PPT生成接口，使用指定的Dify API key，获取完整结果后提取SVG"""
+    data = request.get_json()
+    inputs = data.get('inputs')
+    user_id = data.get('user_id')
+    sys_query = data.get('sys_query')
+    conversation_id = data.get('conversation_id', '')
+    
+    if not inputs or not user_id or not sys_query:
+        return jsonify({'error': '参数缺失'}), 400
+    
+    # PPT生成专用的API token
+    PPT_API_TOKEN = os.environ.get('PPT_API_TOKEN', 'app-r3zuSHgMkB2m139TZnwEyHKr')
+    
+    try:
+        url = f"{DIFY_API_BASE_URL}/chat-messages"
+        headers = {
+            "Authorization": f"Bearer {PPT_API_TOKEN}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "query": sys_query,
+            "inputs": inputs,
+            "user": user_id,
+            "response_mode": "blocking",
+            "conversation_id": conversation_id
+        }
+  
+       
+        response = requests.post(url, headers=headers, json=payload, timeout=300)
+        print(f"Dify响应状态码: {response.status_code}")
+        print(f"Dify响应内容: {response.text[:500]}...")
+        
+        response.raise_for_status()
+        
+        result = response.json()
+        
+        # 从结果中提取answer内容并清理think标签
+        raw_answer = result.get('answer', '')
+        import re
+        clean_answer = re.sub(r'<think>.*?</think>', '', raw_answer, flags=re.DOTALL)
+        
+        return jsonify({'answer': clean_answer})
+        
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Dify API调用失败: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': f'处理失败: {str(e)}'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5055) 
