@@ -14,7 +14,7 @@ REM 等待2秒，确保服务启动
 ping 127.0.0.1 -n 3 >nul
 
 REM 打开网页
-start  http://127.0.0.1:5050
+start  http://127.0.0.1:5055
 
 REM 关闭当前cmd窗口
 exit 
